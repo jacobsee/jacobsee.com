@@ -16,7 +16,9 @@ If you spend any time with the SSO images provided by Red Hat, you'll see that t
 
 Open the `standalone-openshift.xml` from your current directory in your favorite editor, and search for `HTTPS`. You will find one result, a line (537 in the image I used) with a placeholder value of `<!-- ##HTTPS_CONNECTOR## -->` on it. We're not going to need this, so go ahead and delete this line. In its place, add the actual configuration for an HTTPS listener, which looks like this:
 
-    <https-listener name="default-ssl" socket-binding="https" security-realm="ssl-realm" verify-client="REQUESTED" />
+```xml
+<https-listener name="default-ssl" socket-binding="https" security-realm="ssl-realm" verify-client="REQUESTED" />
+```
 
 The important bit here is that we've defined an HTTPS listener with `verify-client` enabled. That flag enables Mutual TLS as described above.
 
@@ -26,117 +28,123 @@ Once you have this CA established, we'll need to turn it into a JKS truststore. 
 
 Now that we have our truststore saved as a JKS file, we need to configure SSO to use it. Open that same `standalone-openshift.xml` file that we modified earlier - we're going to make another change. Towards the beginning (line 31 for me), you will find a block defining security realms. It looks something like this:
 
-    <security-realms>
-        <security-realm name="ManagementRealm">
-            <authentication>
-                <local default-user="$local" skip-group-loading="true"/>
-                <properties path="mgmt-users.properties" relative-to="jboss.server.config.dir"/>
-            </authentication>
-            <authorization map-groups-to-roles="false">
-                <properties path="mgmt-groups.properties" relative-to="jboss.server.config.dir"/>
-            </authorization>
-        </security-realm>
-        <security-realm name="ApplicationRealm">
-            <authentication>
-                <local default-user="$local" allowed-users="*" skip-group-loading="true"/>
-                <properties path="application-users.properties" relative-to="jboss.server.config.dir"/>
-            </authentication>
-            <authorization>
-                <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
-            </authorization>
-            <!-- ##SSL## -->
-        </security-realm>
-    </security-realms>
+```xml
+<security-realms>
+    <security-realm name="ManagementRealm">
+        <authentication>
+            <local default-user="$local" skip-group-loading="true"/>
+            <properties path="mgmt-users.properties" relative-to="jboss.server.config.dir"/>
+        </authentication>
+        <authorization map-groups-to-roles="false">
+            <properties path="mgmt-groups.properties" relative-to="jboss.server.config.dir"/>
+        </authorization>
+    </security-realm>
+    <security-realm name="ApplicationRealm">
+        <authentication>
+            <local default-user="$local" allowed-users="*" skip-group-loading="true"/>
+            <properties path="application-users.properties" relative-to="jboss.server.config.dir"/>
+        </authentication>
+        <authorization>
+            <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
+        </authorization>
+        <!-- ##SSL## -->
+    </security-realm>
+</security-realms>
+```
 
 We need to make a change here to tell SSO to verify client certificates using our newly-generated truststore. Under the security realm `ApplicationRealm`, in the `authentication` subsection, add `<truststore path="/home/jboss/your-truststore-name.jks" keystore-password="<your truststore password>"/>` (obviously with your own parameters filled in) so that you end up with:
 
-    <security-realms>
-        <security-realm name="ManagementRealm">
-            <authentication>
-                <local default-user="$local" skip-group-loading="true"/>
-                <properties path="mgmt-users.properties" relative-to="jboss.server.config.dir"/>
-            </authentication>
-            <authorization map-groups-to-roles="false">
-                <properties path="mgmt-groups.properties" relative-to="jboss.server.config.dir"/>
-            </authorization>
-        </security-realm>
-        <security-realm name="ApplicationRealm">
-            <authentication>
-                <local default-user="$local" allowed-users="*" skip-group-loading="true"/>
-                <properties path="application-users.properties" relative-to="jboss.server.config.dir"/>
-                <truststore path="/home/jboss/your-truststore-name.jks" keystore-password="<your truststore password>"/>
-            </authentication>
-            <authorization>
-                <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
-            </authorization>
-            <!-- ##SSL## -->
-        </security-realm>
-    </security-realms>
+```xml
+<security-realms>
+    <security-realm name="ManagementRealm">
+        <authentication>
+            <local default-user="$local" skip-group-loading="true"/>
+            <properties path="mgmt-users.properties" relative-to="jboss.server.config.dir"/>
+        </authentication>
+        <authorization map-groups-to-roles="false">
+            <properties path="mgmt-groups.properties" relative-to="jboss.server.config.dir"/>
+        </authorization>
+    </security-realm>
+    <security-realm name="ApplicationRealm">
+        <authentication>
+            <local default-user="$local" allowed-users="*" skip-group-loading="true"/>
+            <properties path="application-users.properties" relative-to="jboss.server.config.dir"/>
+            <truststore path="/home/jboss/your-truststore-name.jks" keystore-password="<your truststore password>"/>
+        </authentication>
+        <authorization>
+            <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
+        </authorization>
+        <!-- ##SSL## -->
+    </security-realm>
+</security-realms>
+```
 
 That's all the changes we need to make to this configuration file! Now, let's build a new container image with these changes. Take the directory that you're currently working in, make a git repository, and commit the `standalone-openshift.xml` and truststore JKS files. Push the repository to GitHub, GitLab, or similar.
 
 Make a new file called `build.yml` and add the following to it:
 
-    kind: Template
-    apiVersion: v1
-    metadata:
-      name: "${NAME}"
-      annotations:
-        openshift.io/display-name: "${NAME} Build"
-        description: Build config to create an app image.
-        iconClass: fa-cube
-        tags: apps
-    objects:
-    - apiVersion: v1
-      kind: BuildConfig
-      metadata:
-        labels:
-          build: "${NAME}"
-        name: "${NAME}"
-      spec:
-        nodeSelector:
-        output:
-          to:
-            kind: ImageStreamTag
-            name: "${NAME}:latest"
-        postCommit: {}
-        resources: {}
-        runPolicy: Serial
-        source:
-          dockerfile: |
-              FROM registry.access.redhat.com/redhat-sso-7/sso73-openshift
-              ADD your-truststore-name.jks your-truststore-name.jks
-              ADD standalone-openshift.xml /opt/eap/standalone/configuration/standalone-openshift.xml
-          git:
-            ref: "${SOURCE_REPOSITORY_REF}"
-            uri: "${SOURCE_REPOSITORY_URL}"
-          type: Git
-        strategy:
-          dockerStrategy: {}
-      status:
-        lastVersion: 1
-    - apiVersion: v1
-      kind: ImageStream
-      metadata:
-        labels:
-          build: "${NAME}"
-        name: "${NAME}"
-      spec: {}
-    parameters:
-    - name: NAME
-      displayName: Name
-      description: The name assigned to all objects and the resulting imagestream.
-      required: true
-    - name: SOURCE_REPOSITORY_URL
-      displayName:
-      description:
-      required: true
-    - name: SOURCE_REPOSITORY_REF
-      displayName:
-      description:
-      required: true
+```yaml
+kind: Template
+apiVersion: v1
+metadata:
+  name: "${NAME}"
+  annotations:
+    openshift.io/display-name: "${NAME} Build"
+    description: Build config to create an app image.
+    iconClass: fa-cube
+    tags: apps
+objects:
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
     labels:
-      template: app-build-template
+      build: "${NAME}"
+    name: "${NAME}"
+  spec:
+    nodeSelector:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: "${NAME}:latest"
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      dockerfile: |
+          FROM registry.access.redhat.com/redhat-sso-7/sso73-openshift
+          ADD your-truststore-name.jks your-truststore-name.jks
+          ADD standalone-openshift.xml /opt/eap/standalone/configuration/standalone-openshift.xml
+      git:
+        ref: "${SOURCE_REPOSITORY_REF}"
+        uri: "${SOURCE_REPOSITORY_URL}"
+      type: Git
+    strategy:
+      dockerStrategy: {}
+  status:
+    lastVersion: 1
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      build: "${NAME}"
+    name: "${NAME}"
+  spec: {}
+parameters:
+- name: NAME
+  displayName: Name
+  description: The name assigned to all objects and the resulting imagestream.
+  required: true
+- name: SOURCE_REPOSITORY_URL
+  displayName:
+  description:
+  required: true
+- name: SOURCE_REPOSITORY_REF
+  displayName:
+  description:
+  required: true
+labels:
+  template: app-build-template
+```
 
 Apply this file to your OpenShift cluster with `oc process -f build.yml NAME=my-sso SOURCE_REPOSITORY_URL=<your-repo-url> SOURCE_REPOSITORY_REF=<your-branch-name> | oc apply -f -`. You should then be able to `oc start-build my-sso` and build this image directly in the cluster.
 

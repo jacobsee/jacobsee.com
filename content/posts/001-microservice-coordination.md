@@ -1,6 +1,6 @@
 ---
 title: "Microservice Coordination at a High Level"
-description: "The first post written in Markdown"
+description: "A brief comparison of orchestration and choreography"
 tags: development,microservices,design patterns
 date: 2018-12-04
 ---
@@ -27,7 +27,7 @@ This strategy brings some benefits and some pitfalls to the service composabilit
 
 For further reading on orchestration in practice, or to try it out yourself, you may want to check out [Uber's Cadence](https://github.com/uber/cadence) or [Netflix's Conductor](https://netflix.github.io/conductor/) orchestration engines. Conductor, the system I'm more familiar with, defines workflows using a JSON based DSL that looks like this:
 
-```
+```yaml
 {
   "name": "encode_and_deploy",
   "description": "Encodes a file and deploys to CDN",
