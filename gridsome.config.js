@@ -18,7 +18,10 @@ module.exports = {
         remark: {
           plugins: [
             ['@gridsome/remark-prismjs', {transformInlineCode: true}]
-          ]
+          ],
+          config: {
+            footnotes: true
+          }
         }
       }
     },
