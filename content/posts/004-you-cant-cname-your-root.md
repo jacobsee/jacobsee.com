@@ -1,7 +1,7 @@
 ---
 title: "You can't CNAME your root domain (but also, you can!)"
 description: "A reflection on reactions to pandemic restrictions"
-date: 2021-04-05 
+date: 2021-04-04
 ---
 
 I ran across an interesting situation recently where I wanted to take a friend's domain (that they had given me access to on their Google Domains account) and host a landing page on the same server that the rest of my sites run on - with one small catch:
