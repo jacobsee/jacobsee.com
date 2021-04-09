@@ -1,8 +1,10 @@
 <template>
   <Layout>
     <div class="article">
-      <h1 class="article-title">{{$page.post.title}}</h1>
-      <p class="article-date"> {{ $page.post.date}} · <i>{{$page.post.timeToRead}} min read</i></p>
+      <h1 class="article-title">{{ $page.post.title }}</h1>
+      <p class="article-date">
+        {{ $page.post.date }} · <i>{{ $page.post.timeToRead }} min read</i>
+      </p>
       <article v-html="$page.post.content" />
     </div>
   </Layout>
@@ -12,11 +14,23 @@
 import Header from "@/components/Header";
 export default {
   components: {
-    Header
-  }
+    Header,
+  },
+  metaInfo() {
+    return {
+      title: this.$page.post.title,
+      meta: [
+        { name: "twitter:card", content: "summary" },
+        { name: "twitter:description", content: this.$page.post.description },
+        { name: "twitter:title", content: this.$page.post.title },
+        { name: "twitter:image", content: "https://jacobsee.com/images/me.jpg" },
+        { name: "twitter:site", content: "@jacobsee" },
+        { name: "twitter:creator", content: "@jacobsee" },
+      ],
+    };
+  },
 };
 </script>
-
 
 <page-query>
 query Post ($path: String!) {
@@ -28,6 +42,7 @@ query Post ($path: String!) {
     id
     title
     content
+    description
     date (format: "D MMMM YYYY")
     timeToRead
   }
@@ -35,53 +50,53 @@ query Post ($path: String!) {
 </page-query>
 
 <style>
-  .article {
-    margin-top: 15px;
-  }
+.article {
+  margin-top: 15px;
+}
 
-  .article-title {
-    margin-bottom:0;
-  }
+.article-title {
+  margin-bottom: 0;
+}
 
-  .article-date {
-    color: var(--app-font-color);
-    margin-top:0;
-    font-size:.8em;
-  }
+.article-date {
+  color: var(--app-font-color);
+  margin-top: 0;
+  font-size: 0.8em;
+}
 
-  .article blockquote {
-    padding: 10px 20px;
-    margin: 0 0 20px;
-    font-size: 17.5px;
-    border-left: 5px solid #eee;
-  }
+.article blockquote {
+  padding: 10px 20px;
+  margin: 0 0 20px;
+  font-size: 17.5px;
+  border-left: 5px solid #eee;
+}
 
-  .article table {
-    width: 100%;
-    max-width: 100%;
-    margin-bottom: 20px;
-  }
+.article table {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 20px;
+}
 
-  .article th {
-    vertical-align: bottom;
-    border-bottom: 2px solid #ddd;
-  }
+.article th {
+  vertical-align: bottom;
+  border-bottom: 2px solid #ddd;
+}
 
-  .article td {
-      border-top: 1px solid #ddd;
-      padding: 8px;
-      line-height: 1.42857143;
-      vertical-align: top;
-  }
+.article td {
+  border-top: 1px solid #ddd;
+  padding: 8px;
+  line-height: 1.42857143;
+  vertical-align: top;
+}
 
-  .article tr:nth-child(odd) td {
-    background-color: #f9f9f9;
-  }
+.article tr:nth-child(odd) td {
+  background-color: #f9f9f9;
+}
 
-  .article img {
-    margin:auto;
-    width:80%;
-    display:block;
-    margin:10px auto;
-  }
+.article img {
+  margin: auto;
+  width: 80%;
+  display: block;
+  margin: 10px auto;
+}
 </style>
